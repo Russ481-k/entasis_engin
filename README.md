@@ -14,7 +14,7 @@
 
 ### Backend
 
-- Java 17
+- Java 21
 - Spring Boot 3.x
 - PostgreSQL + TimescaleDB
 - Apache Spark
@@ -48,7 +48,7 @@ graph LR
 
 ### 사전 요구사항
 
-- Java 17+
+- Java 21
 - PostgreSQL 14+
 - TimescaleDB
 - Docker

@@ -1,0 +1,15 @@
+{
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.compile.nullAnalysis.mode": "automatic",
+  "java.format.settings.url": ".vscode/java-formatter.xml",
+  "java.import.gradle.java.home": "",
+  "java.import.gradle.wrapper.enabled": true,
+  "java.jdt.ls.java.home": "",
+  "java.project.sourcePaths": ["src/main/java"],
+  "java.project.outputPath": "build/classes",
+  "java.project.referencedLibraries": ["lib/**/*.jar", "build/libs/**/*.jar"]
+}
+
+
+
+

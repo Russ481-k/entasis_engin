@@ -2,11 +2,13 @@ package com.entasis.trading.config;
 
 import com.entasis.trading.collector.FuturesMarketDataCollector;
 import com.entasis.trading.collector.SpotMarketDataCollector;
-import com.entasis.trading.collector.OptionsMarketDataCollector;
+import com.entasis.trading.collector.OptionMarketDataCollector;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -16,23 +18,21 @@ public class DataCollectorConfig {
     
     private final SpotMarketDataCollector spotCollector;
     private final FuturesMarketDataCollector futuresCollector;
-    private final OptionsMarketDataCollector optionsCollector;
+    private final OptionMarketDataCollector optionsCollector;
+    
+    private static final Logger log = LoggerFactory.getLogger(DataCollectorConfig.class);
     
     @EventListener(ApplicationReadyEvent.class)
-    public void startCollecting() {
-        // 수집할 심볼과 거래소 설정
-        List<String> symbols = List.of("BTCUSDT", "ETHUSDT");
-        List<String> currencies = List.of("BTC", "ETH");
-        List<String> exchanges = List.of("binance");
+    public void startDataCollection() {
+        List<String> currencies = List.of("BTC");
         List<String> optionsExchanges = List.of("deribit");
         
-        // 현물 데이터 수집 시작
-        spotCollector.startCollecting(symbols, exchanges);
-        
-        // 선물 데이터 수집 시작
-        futuresCollector.startCollecting(symbols, exchanges);
-        
-        // 옵션 데이터 수집 시작
+        log.info("Starting options data collection for currencies: {}, exchanges: {}", 
+            currencies, optionsExchanges);
         optionsCollector.startCollecting(currencies, optionsExchanges);
+        
+        // 선물/현물 데이터 수집 비활성화
+        // spotCollector.startCollecting(symbols, exchanges);
+        // futuresCollector.startCollecting(symbols, exchanges);
     }
 } 

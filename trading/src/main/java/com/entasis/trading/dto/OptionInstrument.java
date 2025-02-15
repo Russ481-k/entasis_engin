@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 
 @Getter
 @Setter
-public class OptionsInstrument {
+public class OptionInstrument {
     private String instrumentName;
     private String settlementPeriod;
     private Long expirationTimestamp;

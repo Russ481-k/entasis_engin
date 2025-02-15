@@ -9,7 +9,7 @@ import com.entasis.trading.repository.VolumeAggregationRepository;
 import com.entasis.trading.repository.SymbolRepository;
 import com.entasis.trading.repository.SpotMarketDataRepository;
 import com.entasis.trading.repository.FuturesMarketDataRepository;
-import com.entasis.trading.repository.OptionsMarketDataRepository;
+import com.entasis.trading.repository.OptionMarketDataRepository;
 import com.entasis.trading.service.VolumeAggregationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 
 import com.entasis.trading.entity.SpotMarketDataEntity;
 import com.entasis.trading.entity.FuturesMarketDataEntity;
-import com.entasis.trading.entity.OptionsMarketDataEntity;
+import com.entasis.trading.entity.OptionMarketDataEntity;
 
 @Slf4j
 @Service
@@ -38,7 +38,7 @@ public class VolumeAggregationServiceImpl implements VolumeAggregationService {
     private final SymbolRepository symbolRepository;
     private final SpotMarketDataRepository spotMarketDataRepository;
     private final FuturesMarketDataRepository futuresMarketDataRepository;
-    private final OptionsMarketDataRepository optionsMarketDataRepository;
+    private final OptionMarketDataRepository optionMarketDataRepository;
 
     @Override
     @Transactional
@@ -127,10 +127,11 @@ public class VolumeAggregationServiceImpl implements VolumeAggregationService {
     }
 
     private BigDecimal calculateOptionsVolume(String symbol, LocalDateTime startTime, LocalDateTime endTime) {
-        return optionsMarketDataRepository.findBySymbol_ExchangeSymbolAndTimestampBetweenOrderByTimestampDesc(
+        return optionMarketDataRepository
+            .findByInstrument_Series_UnderlyingAssetAndTimestampBetweenOrderByTimestampDesc(
                 symbol, startTime, endTime)
             .stream()
-            .map(OptionsMarketDataEntity::getVolume)
+            .map(OptionMarketDataEntity::getVolume)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 } 

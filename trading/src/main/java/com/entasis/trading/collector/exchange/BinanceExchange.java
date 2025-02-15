@@ -47,4 +47,21 @@ public class BinanceExchange implements ExchangeConnector {
         
         return List.of(marketData);
     }
+
+    public SpotMarketData getMarketData(String symbol) {
+        String url = String.format("/api/v3/ticker/24hr?symbol=%s", symbol);
+        JsonNode response = webClient.get()
+            .uri(url)
+            .retrieve()
+            .bodyToMono(JsonNode.class)
+            .block();
+            
+        SpotMarketData marketData = new SpotMarketData();
+        marketData.setSymbol(symbol);
+        marketData.setPrice(new BigDecimal(response.get("lastPrice").asText()));
+        marketData.setVolume(new BigDecimal(response.get("volume").asText()));
+        marketData.setTimestamp(LocalDateTime.now());
+        
+        return marketData;
+    }
 } 

@@ -1,0 +1,19 @@
+dependencies {
+    // ... 기존 의존성들 ...
+    implementation 'org.postgresql:postgresql:42.7.2'  // 최신 버전의 PostgreSQL 드라이버
+    
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    
+    // Spring Boot
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    
+    // JSON 처리
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    
+    // WebSocket 클라이언트
+    implementation 'org.java-websocket:Java-WebSocket:1.5.4'
+} 

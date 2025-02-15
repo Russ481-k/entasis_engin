@@ -1,0 +1,15 @@
+-- PostgreSQL에 접속
+psql -U postgres
+
+-- 모든 연결 종료
+SELECT pg_terminate_backend(pg_stat_activity.pid)
+FROM pg_stat_activity
+WHERE pg_stat_activity.datname = 'trading_db'
+AND pid <> pg_backend_pid();
+
+-- 데이터베이스 삭제 후 재생성
+DROP DATABASE IF EXISTS trading_db;
+CREATE DATABASE trading_db;
+
+-- 연결 종료
+\q

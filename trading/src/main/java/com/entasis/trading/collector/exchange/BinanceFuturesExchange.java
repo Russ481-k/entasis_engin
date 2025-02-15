@@ -53,10 +53,41 @@ public class BinanceFuturesExchange implements FuturesConnector {
             marketData.setLow(new BigDecimal(data.get("lowPrice").asText()));
             marketData.setClose(new BigDecimal(data.get("lastPrice").asText()));
             
+            if (data.has("openInterest")) {
+                marketData.setOpenInterest(new BigDecimal(data.get("openInterest").asText()));
+            }
+            if (data.has("fundingRate")) {
+                marketData.setFundingRate(new BigDecimal(data.get("fundingRate").asText()));
+            }
+            if (data.has("markPrice")) {
+                marketData.setMarkPrice(new BigDecimal(data.get("markPrice").asText()));
+            }
+            if (data.has("indexPrice")) {
+                marketData.setIndexPrice(new BigDecimal(data.get("indexPrice").asText()));
+            }
+            
             return List.of(marketData);
         } catch (Exception e) {
             log.error("Error converting futures data: {}", e.getMessage());
             return Collections.emptyList();
         }
+    }
+
+    @Override
+    public FuturesMarketData getMarketData(String symbol) {
+        String url = String.format("/fapi/v1/ticker/24hr?symbol=%s", symbol);
+        JsonNode response = webClient.get()
+            .uri(url)
+            .retrieve()
+            .bodyToMono(JsonNode.class)
+            .block();
+            
+        FuturesMarketData marketData = new FuturesMarketData();
+        marketData.setSymbol(symbol);
+        marketData.setPrice(new BigDecimal(response.get("lastPrice").asText()));
+        marketData.setVolume(new BigDecimal(response.get("volume").asText()));
+        marketData.setTimestamp(LocalDateTime.now());
+        
+        return marketData;
     }
 } 

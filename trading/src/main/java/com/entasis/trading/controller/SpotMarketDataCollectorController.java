@@ -1,38 +1,23 @@
 package com.entasis.trading.controller;
 
-import com.entasis.trading.dto.SpotMarketData;
-import com.entasis.trading.service.SpotMarketDataCollectorService;
+import com.entasis.trading.collector.SpotMarketDataCollector;
+import com.entasis.trading.controller.request.CollectorRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
-
 @RestController
-@RequestMapping("/api/v1/spot")
 @RequiredArgsConstructor
+@RequestMapping("/api/collector/spot")
 public class SpotMarketDataCollectorController {
-    
-    private final SpotMarketDataCollectorService spotMarketDataCollectorService;
+    private final SpotMarketDataCollector spotCollector;
 
-    @PostMapping("/collector/start")
-    public void startCollecting(@RequestBody Map<String, List<String>> request) {
-        spotMarketDataCollectorService.startCollecting(
-            request.get("symbols"),
-            request.get("exchanges")
-        );
+    @PostMapping("/start")
+    public void startCollecting(@RequestBody CollectorRequest request) {
+        spotCollector.startCollecting(request.getSymbols(), request.getExchanges());
     }
 
-    @PostMapping("/collector/stop")
+    @PostMapping("/stop")
     public void stopCollecting() {
-        spotMarketDataCollectorService.stopCollecting();
-    }
-
-    @GetMapping("/data/{exchange}/{symbol}")
-    public SpotMarketData getLatestMarketData(
-        @PathVariable String exchange,
-        @PathVariable String symbol
-    ) {
-        return spotMarketDataCollectorService.getLatestMarketData(symbol, exchange);
+        spotCollector.stopCollecting();
     }
 } 

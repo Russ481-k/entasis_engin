@@ -1,53 +1,63 @@
 package com.entasis.trading.service.impl;
 
 import com.entasis.trading.dto.SpotMarketData;
-import com.entasis.trading.entity.ExchangeEntity;
-import com.entasis.trading.entity.SymbolEntity;
-import com.entasis.trading.entity.enums.ExchangeStatus;
-import com.entasis.trading.entity.enums.ExchangeType;
-import com.entasis.trading.mapper.SpotMarketDataMapper;
-import com.entasis.trading.repository.ExchangeRepository;
+import com.entasis.trading.entity.SpotMarketDataEntity;
+import com.entasis.trading.entity.Symbol;
+import com.entasis.trading.entity.enums.InstrumentType;
 import com.entasis.trading.repository.SpotMarketDataRepository;
 import com.entasis.trading.repository.SymbolRepository;
+import com.entasis.trading.repository.ExchangeRepository;
 import com.entasis.trading.service.SpotMarketDataService;
-import lombok.RequiredArgsConstructor;
+import com.entasis.trading.mapper.SpotMarketDataMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.entasis.trading.entity.ExchangeEntity;
+import com.entasis.trading.entity.enums.ExchangeType;
+import com.entasis.trading.service.BaseMarketDataService;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class SpotMarketDataServiceImpl implements SpotMarketDataService {
+public class SpotMarketDataServiceImpl extends BaseMarketDataService<SpotMarketData> 
+    implements SpotMarketDataService {
 
     private final SpotMarketDataRepository spotMarketDataRepository;
     private final ExchangeRepository exchangeRepository;
-    private final SymbolRepository symbolRepository;
     private final SpotMarketDataMapper spotMarketDataMapper;
+    private final SymbolRepository symbolRepository;
 
-    @Override
-    @Transactional
-    public SpotMarketData save(SpotMarketData marketData) {
-        ExchangeEntity exchange = getOrCreateExchange(marketData.getExchange());
-        SymbolEntity symbol = getOrCreateSymbol(marketData.getSymbol());
-        
-        var entity = spotMarketDataMapper.toEntity(marketData, symbol, exchange);
-        entity = spotMarketDataRepository.save(entity);
-        return spotMarketDataMapper.toDto(entity);
+    public SpotMarketDataServiceImpl(
+        SymbolRepository symbolRepository,
+        ExchangeRepository exchangeRepository,
+        SpotMarketDataRepository spotMarketDataRepository,
+        SpotMarketDataMapper spotMarketDataMapper
+    ) {
+        this.spotMarketDataRepository = spotMarketDataRepository;
+        this.exchangeRepository = exchangeRepository;
+        this.spotMarketDataMapper = spotMarketDataMapper;
+        this.symbolRepository = symbolRepository;
     }
 
     @Override
-    @Transactional
-    public void saveAll(List<SpotMarketData> marketDataList) {
-        marketDataList.forEach(this::save);
+    protected InstrumentType getInstrumentType() {
+        return InstrumentType.SPOT;
+    }
+
+    @Override
+    protected void saveInternal(SpotMarketData marketData, Symbol symbol) {
+        SpotMarketDataEntity entity = spotMarketDataMapper.toEntity(marketData, symbol);
+        spotMarketDataRepository.save(entity);
     }
 
     @Override
     public List<SpotMarketData> findBySymbolAndExchange(String symbol, String exchange) {
-        return spotMarketDataRepository.findBySymbol_SymbolAndExchange_NameOrderByTimestampDesc(symbol, exchange)
+        return spotMarketDataRepository.findBySymbol_ExchangeSymbolAndSymbol_Exchange_NameOrderByTimestampDesc(
+            symbol, exchange)
             .stream()
             .map(spotMarketDataMapper::toDto)
             .collect(Collectors.toList());
@@ -55,7 +65,7 @@ public class SpotMarketDataServiceImpl implements SpotMarketDataService {
 
     @Override
     public List<SpotMarketData> findBySymbol(String symbol) {
-        return spotMarketDataRepository.findBySymbol_SymbolOrderByTimestampDesc(symbol)
+        return spotMarketDataRepository.findBySymbol_ExchangeSymbolOrderByTimestampDesc(symbol)
             .stream()
             .map(spotMarketDataMapper::toDto)
             .collect(Collectors.toList());
@@ -63,7 +73,8 @@ public class SpotMarketDataServiceImpl implements SpotMarketDataService {
 
     @Override
     public List<SpotMarketData> findBySymbolAndTimeRange(String symbol, LocalDateTime startTime, LocalDateTime endTime) {
-        return spotMarketDataRepository.findBySymbol_SymbolAndTimestampBetweenOrderByTimestampDesc(symbol, startTime, endTime)
+        return spotMarketDataRepository.findBySymbol_ExchangeSymbolAndTimestampBetweenOrderByTimestampDesc(
+            symbol, startTime, endTime)
             .stream()
             .map(spotMarketDataMapper::toDto)
             .collect(Collectors.toList());
@@ -71,7 +82,7 @@ public class SpotMarketDataServiceImpl implements SpotMarketDataService {
 
     @Override
     public List<SpotMarketData> findByExchange(String exchange) {
-        return spotMarketDataRepository.findByExchange_NameOrderByTimestampDesc(exchange)
+        return spotMarketDataRepository.findBySymbol_Exchange_NameOrderByTimestampDesc(exchange)
             .stream()
             .map(spotMarketDataMapper::toDto)
             .collect(Collectors.toList());
@@ -83,36 +94,36 @@ public class SpotMarketDataServiceImpl implements SpotMarketDataService {
         spotMarketDataRepository.deleteById(id);
     }
 
-    private ExchangeEntity getOrCreateExchange(String name) {
-        return exchangeRepository.findByNameAndType(name, ExchangeType.SPOT)
+    @Override
+    public Symbol getOrCreateSymbol(String symbolName, InstrumentType instrumentType) {
+        return symbolRepository.findByExchangeSymbolAndInstrumentTypeAndExchange_Type(
+            symbolName, instrumentType, ExchangeType.SPOT)
             .orElseGet(() -> {
-                ExchangeEntity newExchange = new ExchangeEntity();
-                newExchange.setName(name);
-                newExchange.setType(ExchangeType.SPOT);
-                newExchange.setStatus(ExchangeStatus.ACTIVE);
-                return exchangeRepository.save(newExchange);
-            });
-    }
-
-    private SymbolEntity getOrCreateSymbol(String symbolName) {
-        return symbolRepository.findBySymbol(symbolName)
-            .orElseGet(() -> {
-                SymbolEntity newSymbol = new SymbolEntity();
-                newSymbol.setSymbol(symbolName);
-                String[] parts = symbolName.split("/");
+                ExchangeEntity exchange = exchangeRepository.findByNameAndType("binance", ExchangeType.valueOf(instrumentType.name()))
+                    .orElseThrow(() -> new RuntimeException(
+                        String.format("Exchange not found: binance/%s", instrumentType)));
+                
+                Symbol newSymbol = new Symbol();
+                newSymbol.setExchange(exchange);
+                newSymbol.setExchangeSymbol(symbolName);
+                String[] parts = symbolName.split("USDT");
                 newSymbol.setBaseAsset(parts[0]);
-                newSymbol.setQuoteAsset(parts.length > 1 ? parts[1] : "USDT");
+                newSymbol.setQuoteAsset("USDT");
+                newSymbol.setInstrumentType(instrumentType);
+                
                 return symbolRepository.save(newSymbol);
             });
     }
 
+    @Override
     @Transactional
-    public void saveMarketData(SpotMarketData data) {
-        ExchangeEntity exchange = exchangeRepository.findByNameAndType(data.getExchange(), ExchangeType.SPOT)
-            .orElseThrow(() -> new RuntimeException("Exchange not found"));
-        SymbolEntity symbol = getOrCreateSymbol(data.getSymbol());
-        
-        var entity = spotMarketDataMapper.toEntity(data, symbol, exchange);
-        spotMarketDataRepository.save(entity);
+    public SpotMarketData save(SpotMarketData marketData) {
+        return super.save(marketData);
+    }
+
+    @Override
+    @Transactional
+    public void saveAll(List<SpotMarketData> marketDataList) {
+        marketDataList.forEach(this::save);
     }
 } 

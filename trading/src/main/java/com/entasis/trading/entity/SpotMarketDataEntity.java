@@ -4,30 +4,21 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "spot_market_data")
-@Getter @Setter
-public class SpotMarketDataEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
-    @ManyToOne
-    @JoinColumn(name = "symbol_id", nullable = false)
-    private SymbolEntity symbol;
-    
-    @ManyToOne
-    @JoinColumn(name = "exchange_id", nullable = false)
-    private ExchangeEntity exchange;
-    
-    private LocalDateTime timestamp;
-    private BigDecimal price;
-    private BigDecimal volume;
+@Getter
+@Setter
+public class SpotMarketDataEntity extends BaseMarketDataEntity {
+    @Column(name = "open", precision = 30, scale = 8)
     private BigDecimal open;
+
+    @Column(name = "high", precision = 30, scale = 8)
     private BigDecimal high;
+
+    @Column(name = "low", precision = 30, scale = 8)
     private BigDecimal low;
+
+    @Column(name = "close", precision = 30, scale = 8)
     private BigDecimal close;
-    private LocalDateTime createdAt;
 } 

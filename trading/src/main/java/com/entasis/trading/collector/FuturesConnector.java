@@ -6,4 +6,5 @@ import java.util.concurrent.CompletableFuture;
 
 public interface FuturesConnector {
     CompletableFuture<List<FuturesMarketData>> fetchFuturesData(String exchange, String symbol);
+    FuturesMarketData getMarketData(String symbol);
 } 

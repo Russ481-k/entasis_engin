@@ -1,42 +1,51 @@
 package com.entasis.trading.service.impl;
 
 import com.entasis.trading.dto.FuturesMarketData;
+import com.entasis.trading.entity.FuturesMarketDataEntity;
+import com.entasis.trading.entity.Symbol;
 import com.entasis.trading.entity.ExchangeEntity;
-import com.entasis.trading.entity.SymbolEntity;
 import com.entasis.trading.entity.enums.ExchangeStatus;
 import com.entasis.trading.entity.enums.ExchangeType;
+import com.entasis.trading.entity.enums.InstrumentType;
 import com.entasis.trading.mapper.FuturesMarketDataMapper;
-import com.entasis.trading.repository.ExchangeRepository;
 import com.entasis.trading.repository.FuturesMarketDataRepository;
 import com.entasis.trading.repository.SymbolRepository;
+import com.entasis.trading.repository.ExchangeRepository;
 import com.entasis.trading.service.FuturesMarketDataService;
-import lombok.RequiredArgsConstructor;
+import com.entasis.trading.service.BaseMarketDataService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class FuturesMarketDataServiceImpl implements FuturesMarketDataService {
+@RequiredArgsConstructor
+public class FuturesMarketDataServiceImpl extends BaseMarketDataService<FuturesMarketData> 
+    implements FuturesMarketDataService {
 
-    private final FuturesMarketDataRepository futuresMarketDataRepository;
-    private final ExchangeRepository exchangeRepository;
     private final SymbolRepository symbolRepository;
+    private final ExchangeRepository exchangeRepository;
+    private final FuturesMarketDataRepository futuresMarketDataRepository;
     private final FuturesMarketDataMapper futuresMarketDataMapper;
+
+    @Override
+    protected InstrumentType getInstrumentType() {
+        return InstrumentType.FUTURES;
+    }
 
     @Override
     @Transactional
     public FuturesMarketData save(FuturesMarketData marketData) {
-        ExchangeEntity exchange = getOrCreateExchange(marketData.getExchange());
-        SymbolEntity symbol = getOrCreateSymbol(marketData.getSymbol());
-        
-        var entity = futuresMarketDataMapper.toEntity(marketData, symbol, exchange);
-        entity = futuresMarketDataRepository.save(entity);
-        return futuresMarketDataMapper.toDto(entity);
+        super.save(marketData);
+        return marketData;
     }
 
     @Override
@@ -46,8 +55,22 @@ public class FuturesMarketDataServiceImpl implements FuturesMarketDataService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED, propagation = Propagation.REQUIRES_NEW)
+    protected void saveInternal(FuturesMarketData marketData, Symbol symbol) {
+        try {
+            FuturesMarketDataEntity entity = futuresMarketDataMapper.toEntity(marketData, symbol);
+            entity.setExchange(symbol.getExchange());
+            futuresMarketDataRepository.saveAndFlush(entity);
+        } catch (Exception e) {
+            log.error("Error saving futures market data: {}", e.getMessage());
+            throw e;
+        }
+    }
+
+    @Override
     public List<FuturesMarketData> findBySymbolAndExchange(String symbol, String exchange) {
-        return futuresMarketDataRepository.findBySymbol_SymbolAndExchange_NameOrderByTimestampDesc(symbol, exchange)
+        return futuresMarketDataRepository.findBySymbol_ExchangeSymbolAndExchange_NameOrderByTimestampDesc(
+            symbol, exchange)
             .stream()
             .map(futuresMarketDataMapper::toDto)
             .collect(Collectors.toList());
@@ -55,7 +78,7 @@ public class FuturesMarketDataServiceImpl implements FuturesMarketDataService {
 
     @Override
     public List<FuturesMarketData> findBySymbol(String symbol) {
-        return futuresMarketDataRepository.findBySymbol_SymbolOrderByTimestampDesc(symbol)
+        return futuresMarketDataRepository.findBySymbol_ExchangeSymbolOrderByTimestampDesc(symbol)
             .stream()
             .map(futuresMarketDataMapper::toDto)
             .collect(Collectors.toList());
@@ -63,7 +86,8 @@ public class FuturesMarketDataServiceImpl implements FuturesMarketDataService {
 
     @Override
     public List<FuturesMarketData> findBySymbolAndTimeRange(String symbol, LocalDateTime startTime, LocalDateTime endTime) {
-        return futuresMarketDataRepository.findBySymbol_SymbolAndTimestampBetweenOrderByTimestampDesc(symbol, startTime, endTime)
+        return futuresMarketDataRepository.findBySymbol_ExchangeSymbolAndTimestampBetweenOrderByTimestampDesc(
+            symbol, startTime, endTime)
             .stream()
             .map(futuresMarketDataMapper::toDto)
             .collect(Collectors.toList());
@@ -83,14 +107,26 @@ public class FuturesMarketDataServiceImpl implements FuturesMarketDataService {
         futuresMarketDataRepository.deleteById(id);
     }
 
-    @Transactional
-    public void saveMarketData(FuturesMarketData data) {
-        ExchangeEntity exchange = exchangeRepository.findByNameAndType(data.getExchange(), ExchangeType.FUTURES)
-            .orElseThrow(() -> new RuntimeException("Exchange not found"));
-        SymbolEntity symbol = getOrCreateSymbol(data.getSymbol());
-        
-        var entity = futuresMarketDataMapper.toEntity(data, symbol, exchange);
-        futuresMarketDataRepository.save(entity);
+    @Override
+    public Symbol getOrCreateSymbol(String symbolName, InstrumentType instrumentType) {
+        return symbolRepository.findByExchangeSymbolAndInstrumentTypeAndExchange_Type(
+            symbolName, instrumentType, ExchangeType.FUTURES)
+            .orElseGet(() -> {
+                ExchangeEntity exchange = exchangeRepository.findByNameAndType("binance", 
+                    ExchangeType.valueOf(instrumentType.name()))
+                    .orElseThrow(() -> new RuntimeException(
+                        String.format("Exchange not found: binance/%s", instrumentType)));
+                
+                Symbol newSymbol = new Symbol();
+                newSymbol.setExchange(exchange);
+                newSymbol.setExchangeSymbol(symbolName);
+                String[] parts = symbolName.split("USDT");
+                newSymbol.setBaseAsset(parts[0]);
+                newSymbol.setQuoteAsset("USDT");
+                newSymbol.setInstrumentType(instrumentType);
+                
+                return symbolRepository.save(newSymbol);
+            });
     }
 
     private ExchangeEntity getOrCreateExchange(String name) {
@@ -101,18 +137,6 @@ public class FuturesMarketDataServiceImpl implements FuturesMarketDataService {
                 newExchange.setType(ExchangeType.FUTURES);
                 newExchange.setStatus(ExchangeStatus.ACTIVE);
                 return exchangeRepository.save(newExchange);
-            });
-    }
-
-    private SymbolEntity getOrCreateSymbol(String symbolName) {
-        return symbolRepository.findBySymbol(symbolName)
-            .orElseGet(() -> {
-                SymbolEntity newSymbol = new SymbolEntity();
-                newSymbol.setSymbol(symbolName);
-                String[] parts = symbolName.split("/");
-                newSymbol.setBaseAsset(parts[0]);
-                newSymbol.setQuoteAsset(parts.length > 1 ? parts[1] : "USDT");
-                return symbolRepository.save(newSymbol);
             });
     }
 } 

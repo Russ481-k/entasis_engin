@@ -4,34 +4,33 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "futures_market_data")
-@Getter @Setter
-public class FuturesMarketDataEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
-    @ManyToOne
-    @JoinColumn(name = "symbol_id", nullable = false)
-    private SymbolEntity symbol;
-    
-    @ManyToOne
+@Getter
+@Setter
+public class FuturesMarketDataEntity extends BaseMarketDataEntity {
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "exchange_id", nullable = false)
     private ExchangeEntity exchange;
     
-    private LocalDateTime timestamp;
-    private BigDecimal price;
-    private BigDecimal volume;
-    private BigDecimal open;
-    private BigDecimal high;
-    private BigDecimal low;
-    private BigDecimal close;
+    @Column(name = "open_interest")
     private BigDecimal openInterest;
+    
+    @Column(name = "funding_rate")
     private BigDecimal fundingRate;
+    
+    @Column(name = "mark_price")
     private BigDecimal markPrice;
+    
+    @Column(name = "index_price")
     private BigDecimal indexPrice;
-    private LocalDateTime createdAt;
+
+    public ExchangeEntity getExchange() {
+        return exchange;
+    }
+
+    public void setExchange(ExchangeEntity exchange) {
+        this.exchange = exchange;
+    }
 } 

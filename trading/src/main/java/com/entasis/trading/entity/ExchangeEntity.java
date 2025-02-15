@@ -9,22 +9,24 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "exchanges")
-@Getter @Setter
+@Getter
+@Setter
 public class ExchangeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(nullable = false)
+    @Column(name = "name", nullable = false, unique = true)
     private String name;
     
-    @Column(nullable = false)
+    @Column(name = "type")
     @Enumerated(EnumType.STRING)
     private ExchangeType type;
     
-    @Column(nullable = false)
+    @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
     private ExchangeStatus status;
     
-    private LocalDateTime createdAt;
+    @Column(name = "created_at")
+    private LocalDateTime createdAt = LocalDateTime.now();
 } 

@@ -1,38 +1,25 @@
 package com.entasis.trading.controller;
 
-import com.entasis.trading.dto.FuturesMarketData;
-import com.entasis.trading.service.FuturesMarketDataCollectorService;
+import com.entasis.trading.collector.FuturesMarketDataCollector;
+import com.entasis.trading.controller.request.CollectorRequest;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/futures")
 @RequiredArgsConstructor
+@RequestMapping("/api/collector/futures")
 public class FuturesMarketDataCollectorController {
-    
-    private final FuturesMarketDataCollectorService futuresMarketDataCollectorService;
+    private final FuturesMarketDataCollector futuresCollector;
 
-    @PostMapping("/collector/start")
-    public void startCollecting(@RequestBody Map<String, List<String>> request) {
-        futuresMarketDataCollectorService.startCollecting(
-            request.get("symbols"),
-            request.get("exchanges")
-        );
+    @PostMapping("/start")
+    public void startCollecting(@RequestBody CollectorRequest request) {
+        futuresCollector.startCollecting(request.getSymbols(), request.getExchanges());
     }
 
-    @PostMapping("/collector/stop")
+    @PostMapping("/stop")
     public void stopCollecting() {
-        futuresMarketDataCollectorService.stopCollecting();
-    }
-
-    @GetMapping("/data/{exchange}/{symbol}")
-    public FuturesMarketData getLatestMarketData(
-        @PathVariable String exchange,
-        @PathVariable String symbol
-    ) {
-        return futuresMarketDataCollectorService.getLatestMarketData(symbol, exchange);
+        futuresCollector.stopCollecting();
     }
 } 

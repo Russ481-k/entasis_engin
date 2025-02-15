@@ -1,16 +1,12 @@
 package com.entasis.trading.dto;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
-@Data
-public class SpotMarketData {
-    private String symbol;
-    private String exchange;
-    private LocalDateTime timestamp;
-    private BigDecimal price;
-    private BigDecimal volume;
+@Getter
+@Setter
+public class SpotMarketData extends BaseMarketDataDto {
     private BigDecimal open;
     private BigDecimal high;
     private BigDecimal low;
